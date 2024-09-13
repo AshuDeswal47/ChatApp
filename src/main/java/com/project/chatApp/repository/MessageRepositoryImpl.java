@@ -8,6 +8,8 @@ import org.springframework.data.mongodb.core.query.Update;
 
 public class MessageRepositoryImpl {
 
+    private static final String COLLECTION = "message";
+
     @Autowired
     private MongoTemplate mongoTemplate;
 
@@ -21,7 +23,7 @@ public class MessageRepositoryImpl {
         Update update = new Update().set("status", status);
 
         // Perform the update
-        mongoTemplate.updateMulti(query, update, "messages"); // "messages" is the collection name
+        mongoTemplate.updateMulti(query, update, COLLECTION);
     }
 
 }

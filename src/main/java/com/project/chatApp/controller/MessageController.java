@@ -1,13 +1,16 @@
 package com.project.chatApp.controller;
 
-import com.project.chatApp.entity.Message;
+import com.project.chatApp.dataTransferObject.MessageDTO;
+import com.project.chatApp.entity.MessageEntity;
 import com.project.chatApp.service.MessageService;
+import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 // It is a specialized version of the @Controller annotation, designed to handle RESTful web services.
 // It is used to create RRESTful endpoints in a Spring application.
@@ -22,16 +25,39 @@ public class MessageController {
     @Autowired
     public MessageService messageService;
 
-    @GetMapping("/senderId/{senderId}/receiverId/{receiverId}")
-    public ResponseEntity<List<Message>> getAllMessage(@PathVariable String senderId,@PathVariable String receiverId) {
-        List<Message> messages = messageService.getAllMessages(senderId, receiverId);
-        return new ResponseEntity<>(messages, HttpStatus.OK);
+    @PostMapping("/getLast20MessageBeforeMessageId")
+    public ResponseEntity<?> getLast20MessagesBeforeTimestamp(@RequestBody Map<String, Object> payload) {
+        try {
+            // get conversationId and topMessageId from RequestBody
+            if(!(payload.containsKey("conversationId") && payload.containsKey("topMessageId")))
+                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            List<MessageDTO> messageDTOs = messageService.getLast20MessageEntitiesBeforeMessageId((String) payload.get("conversationId"), (String) payload.get("topMessageId"));
+            return new ResponseEntity<>(messageDTOs, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        }
     }
 
-    @GetMapping("/receiverId/{receiverId}")
-    public ResponseEntity<List<Message>> getNewMessage(@PathVariable String receiverId) {
-        List<Message> messages = messageService.getNewMessages(receiverId);
-        return new ResponseEntity<>(messages, HttpStatus.OK);
+    @PutMapping("/allMessageReceived")
+    public ResponseEntity<?> updateMessagesStateToReceived() {
+        try {
+            messageService.updateMessagesStateToReceived();
+            return new ResponseEntity<>(HttpStatus.ACCEPTED);
+        } catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PutMapping("/allMessageViewed")
+    public ResponseEntity<?> updateMessagesStateToViewed(@RequestBody Map<String, Object> payload) {
+        try {
+            if(!payload.containsKey("conversationId"))
+                return new ResponseEntity<>("conversationId is missing", HttpStatus.BAD_REQUEST);
+            messageService.updateMessagesStateToViewed((String) payload.get("conversationId"));
+            return new ResponseEntity<>(HttpStatus.ACCEPTED);
+        } catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
 }

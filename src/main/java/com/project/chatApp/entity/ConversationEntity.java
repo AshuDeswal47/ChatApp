@@ -8,31 +8,22 @@ import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Document("messages")
-public class Message {
+@Document("conversation")
+public class ConversationEntity {
 
     @Id
     private ObjectId id;
 
     @NonNull
-    private String senderId;
+    private List<ObjectId> userIds = new ArrayList<>();
 
     @NonNull
-    private String receiverId;
-
-    @NonNull
-    private Long timestamp;
-
-    @NonNull
-    private String message;
-
-    @NonNull
-    private String messageType;
-
-    @NonNull
-    private String status;
+    private List<ObjectId> messageIds = new ArrayList<>();
 
 }
