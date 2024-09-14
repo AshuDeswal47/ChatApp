@@ -28,6 +28,9 @@ public class UserEntity {
     private String password;
 
     @NonNull
+    private String profilePicUrl;
+
+    @NonNull
     private List<String> roles = new ArrayList<>();
 
     @NonNull

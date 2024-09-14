@@ -27,10 +27,10 @@ public class ConversationService {
     @Autowired
     UserService userService;
 
-    public ConversationDTO createConversation(String userId) throws Exception {
+    public ConversationDTO createConversation(String username) throws Exception {
         // check if user by this userId is present in our database
         UserEntity userEntity1 = userService.getUser();
-        UserEntity userEntity2 = userService.getUser(new ObjectId(userId));
+        UserEntity userEntity2 = userService.getUser(username);
         // if not then throw error
         if (userEntity1 == null || userEntity2 == null) throw new Exception("User not found");
         // create userIds list
@@ -41,8 +41,8 @@ public class ConversationService {
             // find conversation with this user
             for (ConversationEntity myConversationEntity : getAllConversationEntities()) {
                 if (myConversationEntity.getUserIds().stream().anyMatch(userObjectId -> userObjectId.equals(userEntity2.getId()))) {
-                    // if conversation is present return the conversationDTO
-                    return getConversationDTO(myConversationEntity);
+                    // if conversation is present throw exception
+                    throw new Exception("Conversation with this user already created.");
                 }
             }
             // if conversation is not present then create a new one

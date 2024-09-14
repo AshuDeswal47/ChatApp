@@ -6,19 +6,30 @@ import com.project.chatApp.entity.UserEntity;
 import com.project.chatApp.repository.UserRepository;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 @Service
 public class UserService {
+
+    @Value("${file.upload-dir}")
+    private String PROFILE_PIC_DIRECTORY;
 
     @Autowired
     private UserRepository userRepository;
@@ -36,6 +47,7 @@ public class UserService {
             UserEntity newUserEntity = new UserEntity();
             newUserEntity.setUsername(userEntity.getUsername());
             newUserEntity.setPassword(userEntity.getPassword());
+            newUserEntity.setProfilePicUrl("Default");
             newUserEntity.setRoles(List.of("User"));
             encryptUserPassword(newUserEntity);
             newUserEntity.setConversationIds(new ArrayList<>());
@@ -78,6 +90,7 @@ public class UserService {
         UserDTO userDTO = new UserDTO();
         userDTO.setId(userEntity.getId().toHexString());
         userDTO.setUsername(userEntity.getUsername());
+        userDTO.setProfilePicUrl(userEntity.getProfilePicUrl());
         userDTO.setConversations(conversationService.getAllConversationDTOs());
         return userDTO;
     }
@@ -88,6 +101,7 @@ public class UserService {
         PublicUserDTO publicUserDTO = new PublicUserDTO();
         publicUserDTO.setId(userEntity.getId().toHexString());
         publicUserDTO.setUsername(userEntity.getUsername());
+        publicUserDTO.setProfilePicUrl(userEntity.getProfilePicUrl());
         return publicUserDTO;
     }
 
@@ -97,7 +111,34 @@ public class UserService {
         PublicUserDTO publicUserDTO = new PublicUserDTO();
         publicUserDTO.setId(userEntity.getId().toHexString());
         publicUserDTO.setUsername(userEntity.getUsername());
+        publicUserDTO.setProfilePicUrl(userEntity.getProfilePicUrl());
         return publicUserDTO;
+    }
+
+    public void uploadProfilePic(MultipartFile file) throws Exception {
+        // Create the upload directory if it does not exist
+        File directory = new File(PROFILE_PIC_DIRECTORY);
+        if (!directory.exists()) {
+            directory.mkdirs();
+        }
+        // Get the file
+        String filename = getUsername() +  "-profile-pic" + ".jpeg";
+        Path path = Paths.get(PROFILE_PIC_DIRECTORY + filename);
+        Files.write(path, file.getBytes());
+        // Save file path in database
+        UserEntity userEntity = getUser();
+        userEntity.setProfilePicUrl(PROFILE_PIC_DIRECTORY + filename);
+        userRepository.save(userEntity);
+    }
+
+    public Resource downloadProfilePic(String profilePicUrl) throws Exception {
+        Path filePath = Paths.get(profilePicUrl);
+        Resource resource = new UrlResource(filePath.toUri());
+        if (resource.exists() || resource.isReadable()) {
+            return resource;
+        } else {
+            throw new RuntimeException("Could not read the file!");
+        }
     }
 
     public void encryptUserPassword(UserEntity userEntity) {

@@ -16,4 +16,6 @@ public class PublicUserDTO {
 
     private String username;
 
+    private String profilePicUrl;
+
 }

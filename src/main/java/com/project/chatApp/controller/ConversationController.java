@@ -16,7 +16,7 @@ public class ConversationController {
     @Autowired
     ConversationService conversationService;
 
-    @GetMapping
+    @GetMapping("/getAll")
     public ResponseEntity<?> getAllConversations() {
         try {
             return new ResponseEntity<>(conversationService.getAllConversationDTOs(), HttpStatus.OK);
@@ -25,10 +25,10 @@ public class ConversationController {
         }
     }
 
-    @PostMapping
-    public ResponseEntity<?> createConversation(@RequestBody String userId) {
+    @PostMapping("/create")
+    public ResponseEntity<?> createConversation(@RequestBody String username) {
         try {
-            return new ResponseEntity<>(conversationService.createConversation(userId), HttpStatus.CREATED);
+            return new ResponseEntity<>(conversationService.createConversation(username), HttpStatus.CREATED);
         } catch(Exception e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }

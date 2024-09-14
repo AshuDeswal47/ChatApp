@@ -24,7 +24,7 @@ public class SpringSecurity {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManagerBuilder authenticationManagerBuilder) throws Exception {
         return http.authorizeHttpRequests(request -> request
-                        .requestMatchers("/public/**").permitAll()
+                        .requestMatchers("/public/**", "user/downloadProfilePic").permitAll()
                         .requestMatchers("/message/**", "/user/**", "/ws/message/**").authenticated()
                         //.requestMatchers("/admin/**").hasRole("Admin")
                         .anyRequest().authenticated())
