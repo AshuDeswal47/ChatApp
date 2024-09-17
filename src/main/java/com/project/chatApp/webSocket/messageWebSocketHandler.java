@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class messageWebSocketHandler extends TextWebSocketHandler {
+public class MessageWebSocketHandler extends TextWebSocketHandler {
 
     // active connections with key : objectId
     private final Map<ObjectId, WebSocketSession> sessions = new ConcurrentHashMap<>();

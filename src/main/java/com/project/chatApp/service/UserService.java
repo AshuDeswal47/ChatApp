@@ -115,6 +115,21 @@ public class UserService {
         return publicUserDTO;
     }
 
+<<<<<<< HEAD
+=======
+    public List<PublicUserDTO> getPublicUserDTOs(String search) {
+        return userRepository.findByUsernameStartingWith(search)
+                .orElse(new ArrayList<>())
+                .stream().map(userEntity -> {
+                    PublicUserDTO publicUserDTO = new PublicUserDTO();
+                    publicUserDTO.setId(userEntity.getId().toHexString());
+                    publicUserDTO.setUsername(userEntity.getUsername());
+                    publicUserDTO.setProfilePicUrl(userEntity.getProfilePicUrl());
+                    return publicUserDTO;
+                }).toList();
+    }
+
+>>>>>>> search
     public void uploadProfilePic(MultipartFile file) throws Exception {
         // Create the upload directory if it does not exist
         File directory = new File(PROFILE_PIC_DIRECTORY);
