@@ -25,11 +25,7 @@ public class SpringSecurity {
     public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManagerBuilder authenticationManagerBuilder) throws Exception {
         return http.authorizeHttpRequests(request -> request
                         .requestMatchers("/public/**", "user/downloadProfilePic").permitAll()
-<<<<<<< HEAD
-                        .requestMatchers("/message/**", "/user/**", "/ws/message/**").authenticated()
-=======
                         .requestMatchers("/message/**", "/user/**", "/ws/**").authenticated()
->>>>>>> search
                         //.requestMatchers("/admin/**").hasRole("Admin")
                         .anyRequest().authenticated())
                 .httpBasic(Customizer.withDefaults())

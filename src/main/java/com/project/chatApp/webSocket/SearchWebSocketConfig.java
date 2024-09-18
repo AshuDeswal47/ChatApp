@@ -13,11 +13,11 @@ public class SearchWebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(myWebSocketHandler(), "/ws/search").addInterceptors(new CustomHandshakeInterceptor()).setAllowedOrigins("*");
+        registry.addHandler(SearchWebSocketHandler(), "/ws/search").addInterceptors(new CustomHandshakeInterceptor()).setAllowedOrigins("*");
     }
 
     @Bean
-    public WebSocketHandler myWebSocketHandler() {
+    public WebSocketHandler SearchWebSocketHandler() {
         return new SearchWebSocketHandler();
     }
 

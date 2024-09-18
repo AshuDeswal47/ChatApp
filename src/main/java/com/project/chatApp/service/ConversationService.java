@@ -75,26 +75,18 @@ public class ConversationService {
         return conversationRepository.findAllById(conversationIds);
     }
 
+    public List<ConversationEntity> getAllConversationEntities(List<ObjectId> conversationIds) {
+        return conversationRepository.findAllById(conversationIds);
+    }
+
     public List<ConversationEntity> getAllConversationEntities() {
         List<ObjectId> conversationIds = userService.getUser().getConversationIds();
         return conversationRepository.findAllById(conversationIds);
     }
 
     public ConversationDTO getConversationDTO(ObjectId conversationId) {
-        String myUsername = userService.getUsername();
         ConversationEntity conversationEntity = getConversationEntity(conversationId);
-        ConversationDTO conversationDTO = new ConversationDTO();
-        conversationDTO.setId(conversationEntity.getId().toHexString());
-        // get members of conversation excluding me
-        conversationDTO.setMembers(conversationEntity.getUserIds().stream().map(userId -> userService.getPublicUserDTO(userId))
-                .filter(publicUserDTO -> !(publicUserDTO == null || publicUserDTO.getUsername().equals(myUsername))).toList());
-        List<ObjectId> messageIds = conversationEntity.getMessageIds();
-        // get last 20 messages
-        if (messageIds.size() > 20) {
-            messageIds = messageIds.subList(messageIds.size() - 20, messageIds.size());
-        }
-        conversationDTO.setMessages(messageService.getMessageDTOs(messageIds));
-        return conversationDTO;
+        return getConversationDTO(conversationEntity);
     }
 
     public ConversationDTO getConversationDTO(ConversationEntity conversationEntity) {
@@ -113,15 +105,14 @@ public class ConversationService {
         return conversationDTO;
     }
 
-    public List<ConversationDTO> getAllConversationDTOs() {
-        String myUsername = userService.getUsername();
-        List<ConversationEntity> conversationEntities = getAllConversationEntities();
+    public List<ConversationDTO> getAllConversationDTOs(UserEntity userEntity) {
+        List<ConversationEntity> conversationEntities = getAllConversationEntities(userEntity);
         return conversationEntities.stream().map(conversationEntity -> {
             ConversationDTO conversationDTO = new ConversationDTO();
             conversationDTO.setId(conversationEntity.getId().toHexString());
             // get members of conversation excluding me
             conversationDTO.setMembers(conversationEntity.getUserIds().stream().map(userId -> userService.getPublicUserDTO(userId))
-                    .filter(publicUserDTO -> !(publicUserDTO == null || publicUserDTO.getUsername().equals(myUsername))).toList());
+                    .filter(publicUserDTO -> !(publicUserDTO == null || publicUserDTO.getUsername().equals(userEntity.getUsername()))).toList());
             List<ObjectId> messageIds = conversationEntity.getMessageIds();
             // get last 20 messages
             if (messageIds.size() > 20) {

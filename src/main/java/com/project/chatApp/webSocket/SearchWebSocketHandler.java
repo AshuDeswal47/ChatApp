@@ -41,7 +41,7 @@ public class SearchWebSocketHandler extends TextWebSocketHandler {
             if (username != null) {
                 // store active connections in hashMap
                 sessions.put(username, session);
-                System.out.println("User Connected : " + username);
+                System.out.println("Search WebSocket User Connected : " + username);
             } else {
                 System.out.println("No Authentication Found");
             }

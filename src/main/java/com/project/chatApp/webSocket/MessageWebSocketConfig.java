@@ -11,11 +11,11 @@ public class MessageWebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(myWebSocketHandler(), "/ws/message").addInterceptors(new CustomHandshakeInterceptor()).setAllowedOrigins("*");
+        registry.addHandler(MessageWebSocketHandler(), "/ws/message").addInterceptors(new CustomHandshakeInterceptor()).setAllowedOrigins("*");
     }
 
     @Bean
-    public WebSocketHandler myWebSocketHandler() {
+    public WebSocketHandler MessageWebSocketHandler() {
         return new MessageWebSocketHandler();
     }
 

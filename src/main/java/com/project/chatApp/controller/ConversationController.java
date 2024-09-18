@@ -16,15 +16,6 @@ public class ConversationController {
     @Autowired
     ConversationService conversationService;
 
-    @GetMapping("/getAll")
-    public ResponseEntity<?> getAllConversations() {
-        try {
-            return new ResponseEntity<>(conversationService.getAllConversationDTOs(), HttpStatus.OK);
-        } catch(Exception e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NO_CONTENT);
-        }
-    }
-
     @PostMapping("/create")
     public ResponseEntity<?> createConversation(@RequestBody String username) {
         try {

@@ -116,36 +116,44 @@ public class MessageService {
         messageRepository.save(messageEntity);
     }
 
-    public void updateMessagesStateToReceived() {
-        UserEntity userEntity = userService.getUser();
+    public List<ObjectId> updateMessagesStateToReceived(String username) {
+        UserEntity userEntity = userService.getUser(username);
         List<ConversationEntity> conversationEntities = conversationService.getAllConversationEntities(userEntity);
         List<MessageEntity> messageEntities = new ArrayList<>();
+        List<ObjectId> updatedConversationIds = new ArrayList<>();
         for(ConversationEntity conversationEntity : conversationEntities) {
             List<ObjectId> messageIds = conversationEntity.getMessageIds();
             for(int i=messageIds.size()-1; i>=0; i--) {
                 MessageEntity messageEntity = getMessageEntity(messageIds.get(i));
-                if(messageEntity == null || messageEntity.getSenderId().equals(userEntity.getId())) continue;
-                if(!messageEntity.getStatus().equals("Sent")) break;
+                if(!messageEntity.getStatus().equals("Sent")) {
+                    // if at-least one message updated then add this conversation id into updatedConversationIds
+                    if (i != messageIds.size()-1) updatedConversationIds.add(conversationEntity.getId());
+                    break;
+                }
                 messageEntity.setStatus("Received");
                 messageEntities.add(messageEntity);
             }
         }
         messageRepository.saveAll(messageEntities);
+        return updatedConversationIds;
     }
 
-    public void updateMessagesStateToViewed (String conversationId) {
-        UserEntity userEntity = userService.getUser();
+    public boolean updateMessagesStateToViewed (String conversationId) {
         ConversationEntity conversationEntity = conversationService.getConversationEntity(new ObjectId(conversationId));
         List<ObjectId> messageIds = conversationEntity.getMessageIds();
+        boolean isUpdated = false;
         List<MessageEntity> messageEntities = new ArrayList<>();
         for(int i=messageIds.size()-1; i>=0; i--) {
             MessageEntity messageEntity = getMessageEntity(messageIds.get(i));
-            if(messageEntity == null || messageEntity.getSenderId().equals(userEntity.getId())) continue;
-            if(messageEntity.getStatus().equals("Viewed")) break;
+            if(messageEntity.getStatus().equals("Viewed")) {
+                if (i != messageIds.size()-1) isUpdated = true;
+                break;
+            }
             messageEntity.setStatus("Viewed");
             messageEntities.add(messageEntity);
         }
         messageRepository.saveAll(messageEntities);
+        return isUpdated;
     }
 
 }

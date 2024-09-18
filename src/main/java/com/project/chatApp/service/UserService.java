@@ -4,6 +4,7 @@ import com.project.chatApp.dataTransferObject.PublicUserDTO;
 import com.project.chatApp.dataTransferObject.UserDTO;
 import com.project.chatApp.entity.UserEntity;
 import com.project.chatApp.repository.UserRepository;
+import com.project.chatApp.repository.UserRepositoryImpl;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,6 +34,9 @@ public class UserService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    UserRepositoryImpl userRepositoryImpl;
 
     @Lazy
     @Autowired
@@ -86,12 +90,16 @@ public class UserService {
 
     public UserDTO getUserDTO() throws Exception {
         UserEntity userEntity = getUser();
+        return getUserDTO(userEntity);
+    }
+
+    public UserDTO getUserDTO(UserEntity userEntity) throws Exception {
         if(userEntity == null) throw new Exception("User not found.");
         UserDTO userDTO = new UserDTO();
         userDTO.setId(userEntity.getId().toHexString());
         userDTO.setUsername(userEntity.getUsername());
         userDTO.setProfilePicUrl(userEntity.getProfilePicUrl());
-        userDTO.setConversations(conversationService.getAllConversationDTOs());
+        userDTO.setConversations(conversationService.getAllConversationDTOs(userEntity));
         return userDTO;
     }
 
@@ -115,8 +123,6 @@ public class UserService {
         return publicUserDTO;
     }
 
-<<<<<<< HEAD
-=======
     public List<PublicUserDTO> getPublicUserDTOs(String search) {
         return userRepository.findByUsernameStartingWith(search)
                 .orElse(new ArrayList<>())
@@ -129,7 +135,6 @@ public class UserService {
                 }).toList();
     }
 
->>>>>>> search
     public void uploadProfilePic(MultipartFile file) throws Exception {
         // Create the upload directory if it does not exist
         File directory = new File(PROFILE_PIC_DIRECTORY);

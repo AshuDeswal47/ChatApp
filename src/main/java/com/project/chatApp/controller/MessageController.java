@@ -38,26 +38,4 @@ public class MessageController {
         }
     }
 
-    @PutMapping("/allMessageReceived")
-    public ResponseEntity<?> updateMessagesStateToReceived() {
-        try {
-            messageService.updateMessagesStateToReceived();
-            return new ResponseEntity<>(HttpStatus.ACCEPTED);
-        } catch (Exception e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    @PutMapping("/allMessageViewed")
-    public ResponseEntity<?> updateMessagesStateToViewed(@RequestBody Map<String, Object> payload) {
-        try {
-            if(!payload.containsKey("conversationId"))
-                return new ResponseEntity<>("conversationId is missing", HttpStatus.BAD_REQUEST);
-            messageService.updateMessagesStateToViewed((String) payload.get("conversationId"));
-            return new ResponseEntity<>(HttpStatus.ACCEPTED);
-        } catch (Exception e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
 }
