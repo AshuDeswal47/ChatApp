@@ -1,23 +1,34 @@
 package com.project.chatApp.service;
 
 import com.project.chatApp.dataTransferObject.ConversationDTO;
+import com.project.chatApp.dataTransferObject.MessageDTO;
 import com.project.chatApp.entity.ConversationEntity;
 import com.project.chatApp.entity.UserEntity;
 import com.project.chatApp.repository.ConversationRepository;
+import com.project.chatApp.repository.ConversationRepositoryImpl;
+import com.project.chatApp.webSocket.MessageWebSocketConfig;
+import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 @Service
+@Slf4j
 public class ConversationService {
 
     @Autowired
     ConversationRepository conversationRepository;
+
+    @Autowired
+    ConversationRepositoryImpl conversationRepositoryImpl;
 
     @Lazy
     @Autowired
@@ -27,21 +38,26 @@ public class ConversationService {
     @Autowired
     UserService userService;
 
+    @Autowired
+    MessageWebSocketConfig messageWebSocketConfig;
+
+    @Transactional
     public ConversationDTO createConversation(String username) throws Exception {
-        // check if user by this userId is present in our database
-        UserEntity userEntity1 = userService.getUser();
-        UserEntity userEntity2 = userService.getUser(username);
-        // if not then throw error
-        if (userEntity1 == null || userEntity2 == null) throw new Exception("User not found");
-        // create userIds list
-        List<ObjectId> userIds = new ArrayList<>();
-        userIds.add(userEntity1.getId());
-        userIds.add(userEntity2.getId());
         try {
+            // check if user by this userId is present in our database
+            UserEntity userEntity1 = userService.getUser();
+            UserEntity userEntity2 = userService.getUser(username);
+            // if not then throw error
+            if (userEntity1 == null || userEntity2 == null) throw new Exception("User not found");
+            // create userIds list
+            List<ObjectId> userIds = new ArrayList<>();
+            userIds.add(userEntity1.getId());
+            userIds.add(userEntity2.getId());
             // find conversation with this user
             for (ConversationEntity myConversationEntity : getAllConversationEntities()) {
                 if (myConversationEntity.getUserIds().stream().anyMatch(userObjectId -> userObjectId.equals(userEntity2.getId()))) {
                     // if conversation is present throw exception
+                    log.error("Conversation with this user already created.");
                     throw new Exception("Conversation with this user already created.");
                 }
             }
@@ -50,19 +66,20 @@ public class ConversationService {
             conversationEntity.setUserIds(userIds);
             conversationEntity = conversationRepository.insert(conversationEntity);
             // and add conversationId in all members conversations list
-            for (ObjectId userObjectId : userIds) {
-                userService.addConversation(userObjectId, conversationEntity.getId());
-            }
-            return getConversationDTO(conversationEntity);
+            userService.addConversationToUsers(userIds, conversationEntity.getId());
+            // send new conversation to clients
+            ConversationDTO conversationDTO = getConversationDTO(conversationEntity);
+            messageWebSocketConfig.getWebSocketHandler().sendConversation(conversationDTO, userEntity2.getId());
+            return conversationDTO;
         } catch (Exception e) {
+            log.error("Unable to create conversation.");
             throw new Exception("Unable to create conversation.");
         }
     }
 
-    public ConversationEntity addMessageInConversation(ObjectId conversationId, ObjectId messageId) {
-        ConversationEntity conversationEntity = getConversationEntity(conversationId);
-        conversationEntity.getMessageIds().add(messageId);
-        return conversationRepository.save(conversationEntity);
+    public void addMessageInConversation(ObjectId conversationId, ObjectId messageId) throws Exception {
+        if(!conversationRepositoryImpl.addMessageInConversation(conversationId, messageId))
+            throw new Exception("Unable to add messageId into conversation.");
     }
 
     public ConversationEntity getConversationEntity(ObjectId conversationId) {
@@ -84,11 +101,6 @@ public class ConversationService {
         return conversationRepository.findAllById(conversationIds);
     }
 
-    public ConversationDTO getConversationDTO(ObjectId conversationId) {
-        ConversationEntity conversationEntity = getConversationEntity(conversationId);
-        return getConversationDTO(conversationEntity);
-    }
-
     public ConversationDTO getConversationDTO(ConversationEntity conversationEntity) {
         String myUsername = userService.getUsername();
         ConversationDTO conversationDTO = new ConversationDTO();
@@ -105,22 +117,12 @@ public class ConversationService {
         return conversationDTO;
     }
 
-    public List<ConversationDTO> getAllConversationDTOs(UserEntity userEntity) {
-        List<ConversationEntity> conversationEntities = getAllConversationEntities(userEntity);
-        return conversationEntities.stream().map(conversationEntity -> {
-            ConversationDTO conversationDTO = new ConversationDTO();
-            conversationDTO.setId(conversationEntity.getId().toHexString());
-            // get members of conversation excluding me
-            conversationDTO.setMembers(conversationEntity.getUserIds().stream().map(userId -> userService.getPublicUserDTO(userId))
-                    .filter(publicUserDTO -> !(publicUserDTO == null || publicUserDTO.getUsername().equals(userEntity.getUsername()))).toList());
-            List<ObjectId> messageIds = conversationEntity.getMessageIds();
-            // get last 20 messages
-            if (messageIds.size() > 20) {
-                messageIds = messageIds.subList(messageIds.size() - 20, messageIds.size());
-            }
-            conversationDTO.setMessages(messageService.getMessageDTOs(messageIds));
-            return conversationDTO;
-        }).toList();
+    public List<MessageDTO> getLast20MessageEntitiesBeforeMessageId(String conversationId, String topMessageId) {
+        return conversationRepositoryImpl.getLast20MessageEntitiesBeforeMessageId(new ObjectId(conversationId), new ObjectId(topMessageId));
+    }
+
+    public boolean updateMyMessagesOfConversation(ObjectId conversationId, ObjectId userId) {
+        return conversationRepositoryImpl.updateMyMessagesOfConversationToViewed(conversationId, userId);
     }
 
 }

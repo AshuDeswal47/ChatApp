@@ -3,6 +3,7 @@ package com.project.chatApp.webSocket;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.project.chatApp.dataTransferObject.ConversationDTO;
 import com.project.chatApp.dataTransferObject.MessageDTO;
 import com.project.chatApp.entity.ConversationEntity;
 import com.project.chatApp.entity.MessageEntity;
@@ -10,9 +11,13 @@ import com.project.chatApp.entity.UserEntity;
 import com.project.chatApp.service.ConversationService;
 import com.project.chatApp.service.MessageService;
 import com.project.chatApp.service.UserService;
+import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -22,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 public class MessageWebSocketHandler extends TextWebSocketHandler {
 
     // active connections with key : objectId
@@ -38,7 +44,6 @@ public class MessageWebSocketHandler extends TextWebSocketHandler {
 
     @Autowired
     ConversationService conversationService;
-
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
         try {
@@ -48,18 +53,18 @@ public class MessageWebSocketHandler extends TextWebSocketHandler {
                 if (userEntity != null) {
                     // store active connections in hashMap
                     sessions.put(userEntity.getId(), session);
-                    System.out.println("Message WebSocket User Connected : " + username);
-                    // set all messages of this user received
-                    List<ObjectId> updatedConversationIds = messageService.updateMessagesStateToReceived(username);
-                    sendStatusUpdateReceivedToClients(updatedConversationIds, userEntity);
+                    log.info("MessageWebSocket user connected : {} ", username);
                     // send userData
                     sendUserData(userEntity);
+                    // set all messages of this user received
+                    List<ObjectId> updatedConversationIds = userService.updateMyMessagesOfAllConversationsToReceived(userEntity.getId());
+                    sendStatusUpdateReceived(updatedConversationIds, userEntity);
                 }
             } else {
-                System.out.println("No Authentication Found");
+                log.info("No authentication found");
             }
         } catch (Exception e) {
-            // handle exception
+            log.error("AfterConnectionEstablished : {} ", String.valueOf(e));
         }
     }
 
@@ -72,37 +77,41 @@ public class MessageWebSocketHandler extends TextWebSocketHandler {
                 if (userEntity != null) {
                     // remove the disconnected webSocket from hashMap
                     sessions.remove(userEntity.getId());
-                    System.out.println("Message WebSocket User Disconnected : " + username);
+                    log.info("MessageWebSocket user disconnected : {} ", username);
                 }
             } else {
-                System.out.println("No Authentication Found");
+                log.info("No authentication found");
             }
         } catch (Exception e) {
-            // handle exception
+            log.error("AfterConnectionClosed : {} ", String.valueOf(e));
         }
     }
 
     @Override
-    public void handleTextMessage(WebSocketSession session, TextMessage textMessage) throws Exception {
-        String username = getUsername(session);
-        if (username == null) {
-            System.out.println("No Authentication Found");
-            return;
-        }
-        // convert json string to jsonObject
-        String payload = textMessage.getPayload();
-        JsonObject json = JsonParser.parseString(payload).getAsJsonObject();
-        String type = json.get("type").getAsString();
-        // manage data according to data type
-        if (type.equals("message")) {
-            // new message
-            handleTextNewMessage(username, json);
-        } else if (type.equals("status-update")) {
-            // messages status-update
-            handleStatusUpdate(username, json);
-        } else if (type.equals("get-messages")) {
-            // get request for previous 20 messages of specific conversation
-            handleGetMessagesRequest(username, json);
+    public void handleTextMessage(WebSocketSession session, TextMessage textMessage) {
+        try {
+            String username = getUsername(session);
+            if (username == null) {
+                log.info("No authentication found");
+                return;
+            }
+            // convert json string to jsonObject
+            String payload = textMessage.getPayload();
+            JsonObject json = JsonParser.parseString(payload).getAsJsonObject();
+            String type = json.get("type").getAsString();
+            // manage data according to data type
+            if (type.equals("message")) {
+                // new message
+                handleTextNewMessage(username, json);
+            } else if (type.equals("status-update")) {
+                // messages status-update
+                handleStatusUpdate(username, json);
+            } else if (type.equals("get-messages")) {
+                // get request for previous 20 messages of specific conversation
+                handleGetMessagesRequest(username, json);
+            }
+        } catch (Exception e) {
+            log.error("HandleTextMessage : {} ", String.valueOf(e));
         }
     }
 
@@ -120,7 +129,7 @@ public class MessageWebSocketHandler extends TextWebSocketHandler {
         // add message in mongodb-database
         MessageEntity messageEntity = messageService.addMessage(messageService.getMessageEntryFromMessageDTO(messageDTO), username);
         // send message to receiver if messageEntity not equals to null and webSocket is connected
-        if (messageEntity != null) sendMessageToClients(messageEntity);
+        if (messageEntity != null) sendMessage(messageEntity);
     }
 
     private void handleStatusUpdate(String username, JsonObject json) {
@@ -131,9 +140,9 @@ public class MessageWebSocketHandler extends TextWebSocketHandler {
         UserEntity userEntity = userService.getUser(username);
         if(userEntity == null) return;
         // update-status in database
-        boolean isUpdated = messageService.updateMessagesStateToViewed(conversationId);
+        boolean isUpdated = conversationService.updateMyMessagesOfConversation(new ObjectId(conversationId), userEntity.getId());
         // if status is updated then send status update viewed to clients
-        if (isUpdated) sendStatusUpdateViewedToClients(new ObjectId(conversationId), userEntity);
+        if(isUpdated) sendStatusUpdateViewed(new ObjectId(conversationId), userEntity);
     }
 
     private void handleGetMessagesRequest(String username, JsonObject json) throws Exception {
@@ -141,48 +150,43 @@ public class MessageWebSocketHandler extends TextWebSocketHandler {
         String conversationId = json.get("conversationId").getAsString();
         String topMessageId = json.get("topMessageId").getAsString();
         if (conversationId.isEmpty() || topMessageId.isEmpty()) return;
-        sendMessages(conversationId, username, messageService.getLast20MessageEntitiesBeforeMessageId(conversationId, topMessageId));
+        sendMessages(conversationId, username, conversationService.getLast20MessageEntitiesBeforeMessageId(conversationId, topMessageId));
     }
 
-    private void sendMessageToClients(MessageEntity messageEntity) {
+    private void sendMessage (MessageEntity messageEntity) {
         try {
             // sender user id
-            ObjectId userObjectId = messageEntity.getSenderId();
-            // build json object
-            JsonObject response = new JsonObject();
+            ObjectId senderId = messageEntity.getSenderId();
+            // receiver user id
+            ObjectId receiverId = null;
             // userIds
             List<ObjectId> userIds = conversationService.getConversationEntity(messageEntity.getConversationId()).getUserIds();
             // check if receiver is connected to webSocket
             for (ObjectId userId : userIds) {
-                if (userId.equals(userObjectId)) continue;
-                if (sessions.containsKey(userId)) {
-                    // convert pojo to jason string
-                    messageEntity.setStatus("Received");
-                    String message = objectMapper.writeValueAsString(messageService.getMessageDTOFromMessageEntry(messageEntity));
-                    // set properties in json
-                    response.addProperty("type", "message");
-                    response.addProperty("message", message);
-                    // if receiver user is connected send him the message
-                    sessions.get(userId).sendMessage(new TextMessage(response.toString()));
-                    // update status
-                    messageService.updateMessage(messageEntity);
-                } else {
-                    // convert pojo to jason string
-                    messageEntity.setStatus("Sent");
-                    String message = objectMapper.writeValueAsString(messageService.getMessageDTOFromMessageEntry(messageEntity));
-                    // set properties in json
-                    response.addProperty("type", "message");
-                    response.addProperty("message", message);
-                }
+                if (userId.equals(senderId)) continue;
+                if(sessions.containsKey(userId)) receiverId = userId;
+            }
+            if(receiverId != null) messageEntity.setStatus("Received");
+            // convert pojo to jason string
+            String message = objectMapper.writeValueAsString(messageService.getMessageDTOFromMessageEntry(messageEntity));
+            // build json object
+            JsonObject response = new JsonObject();
+            response.addProperty("type", "message");
+            response.addProperty("message", message);
+            if(receiverId != null) {
+                // if receiver user is connected send him the message
+                sessions.get(receiverId).sendMessage(new TextMessage(response.toString()));
+                // update status
+                messageService.updateMessage(messageEntity);
             }
             // send message to sender user
-            sessions.get(userObjectId).sendMessage(new TextMessage(response.toString()));
+            sessions.get(senderId).sendMessage(new TextMessage(response.toString()));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("SendMessage : {} ", String.valueOf(e));
         }
     }
 
-    private void sendStatusUpdateReceivedToClients(List<ObjectId> conversationIds, UserEntity userEntity) {
+    private void sendStatusUpdateReceived(List<ObjectId> conversationIds, UserEntity userEntity) {
         try {
             for (ConversationEntity conversationEntity : conversationService.getAllConversationEntities(conversationIds)) {
                 for (ObjectId userId : conversationEntity.getUserIds()) {
@@ -199,11 +203,11 @@ public class MessageWebSocketHandler extends TextWebSocketHandler {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("SendStatusUpdateReceived : {} ", String.valueOf(e));
         }
     }
 
-    private void sendStatusUpdateViewedToClients(ObjectId conversationId, UserEntity userEntity) {
+    private void sendStatusUpdateViewed(ObjectId conversationId, UserEntity userEntity) {
         try {
             ConversationEntity conversationEntity = conversationService.getConversationEntity(conversationId);
             for (ObjectId userId : conversationEntity.getUserIds()) {
@@ -219,13 +223,14 @@ public class MessageWebSocketHandler extends TextWebSocketHandler {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("SendStatusUpdateViewed : {} ", String.valueOf(e));
         }
     }
 
     // send user data with last 20 messages
     private void sendUserData(UserEntity userEntity) {
         try {
+            if(!sessions.containsKey(userEntity.getId())) return;
             // build json object
             JsonObject response = new JsonObject();
             response.addProperty("type", "user-data");
@@ -233,13 +238,14 @@ public class MessageWebSocketHandler extends TextWebSocketHandler {
             // send message
             sessions.get(userEntity.getId()).sendMessage(new TextMessage(response.toString()));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("SendUserData : {} ", String.valueOf(e));
         }
     }
 
     private void sendMessages(String conversationId, String username, List<MessageDTO> messages) {
         try {
             UserEntity userEntity = userService.getUser(username);
+            if(!sessions.containsKey(userEntity.getId())) return;
             // build json object
             JsonObject response = new JsonObject();
             response.addProperty("type", "messages");
@@ -248,7 +254,21 @@ public class MessageWebSocketHandler extends TextWebSocketHandler {
             // send message
             sessions.get(userEntity.getId()).sendMessage(new TextMessage(response.toString()));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("SendMessage : {} ", String.valueOf(e));
+        }
+    }
+
+    public void sendConversation(ConversationDTO conversationDTO, ObjectId userId) {
+        try {
+            if(!sessions.containsKey(userId)) return;
+            // build json object
+            JsonObject response = new JsonObject();
+            response.addProperty("type", "conversation");
+            response.addProperty("conversation", objectMapper.writeValueAsString(conversationDTO));
+            // send message
+            sessions.get(userId).sendMessage(new TextMessage(response.toString()));
+        } catch (Exception e) {
+            log.error("SendConversation : {} ", String.valueOf(e));
         }
     }
 

@@ -10,6 +10,7 @@ import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,10 +32,6 @@ public class MessageService {
     @Autowired
     public ConversationService conversationService;
 
-    public MessageEntity getMessageEntity(ObjectId messageId) {
-        return messageRepository.findById(messageId).orElse(null);
-    }
-
     public List<MessageEntity> getMessageEntities(List<ObjectId> messageIds) {
         return messageRepository.findAllById(messageIds);
     }
@@ -51,27 +48,6 @@ public class MessageService {
             messageDTO.setTimestamp(messageEntity.getTimestamp());
             return messageDTO;
         }).toList();
-    }
-
-    public List<MessageDTO> getLast20MessageEntitiesBeforeMessageId(String conversationId, String topMessageId) throws Exception {
-        // get conversationEntity from conversationId
-        ConversationEntity conversationEntity = conversationService.getConversationEntity(new ObjectId(conversationId));
-        // if conversationEntity is null then throw exception
-        if(conversationEntity == null) throw new Exception("Conversation not found.");
-        // get messageIds from conversationIds
-        List<ObjectId> messageIds = conversationEntity.getMessageIds();
-        // get index of topMessageId
-        int topMessageIndex = messageIds.indexOf(new ObjectId(topMessageId));
-        // if topMessageId is not present in conversation list throw exception
-        if(topMessageIndex == -1) throw new Exception("Message not found");
-        // if input is correct extract at-most 20 messageObjectIds above topMessageId
-        int nextTopMessageIndex = 0;
-        if(topMessageIndex > 20) {
-            nextTopMessageIndex = topMessageIndex - 20;
-        }
-        messageIds = messageIds.subList(nextTopMessageIndex, topMessageIndex);
-        // get message DTOs from these object ids and return
-        return getMessageDTOs(messageIds);
     }
 
     public MessageEntity getMessageEntryFromMessageDTO(MessageDTO messageDTO) {
@@ -95,65 +71,27 @@ public class MessageService {
         return messageDTO;
     }
 
-    public MessageEntity addMessage(MessageEntity messageEntity, String username) {
-        UserEntity userEntity = userService.getUser(messageEntity.getSenderId());
-        if (!username.equals(userEntity.getUsername())) messageEntity.setSenderId(userService.getUser(username).getId());
-        // check if message sender is part of the conversation or not
-        ObjectId messageEntityConversationId = messageEntity.getConversationId();
-        boolean isConversationIdPresent = false;
-        for(ObjectId conversationId : userEntity.getConversationIds()) {
-            if(conversationId.equals(messageEntityConversationId)) isConversationIdPresent = true;
-        }
-        if(isConversationIdPresent) {
-            MessageEntity message = messageRepository.insert(messageEntity);
-            conversationService.addMessageInConversation(message.getConversationId(), message.getId());
-            return message;
-        }
-        return null;
+    @Transactional
+    public MessageEntity addMessage(MessageEntity messageEntity, String username) throws Exception {
+            UserEntity userEntity = userService.getUser(messageEntity.getSenderId());
+            if (!username.equals(userEntity.getUsername()))
+                messageEntity.setSenderId(userService.getUser(username).getId());
+            // check if message sender is part of the conversation or not
+            ObjectId messageEntityConversationId = messageEntity.getConversationId();
+            boolean isConversationIdPresent = false;
+            for (ObjectId conversationId : userEntity.getConversationIds()) {
+                if (conversationId.equals(messageEntityConversationId)) isConversationIdPresent = true;
+            }
+            if (isConversationIdPresent) {
+                MessageEntity message = messageRepository.insert(messageEntity);
+                conversationService.addMessageInConversation(message.getConversationId(), message.getId());
+                return message;
+            }
+            return null;
     }
 
     public void updateMessage(MessageEntity messageEntity) {
         messageRepository.save(messageEntity);
-    }
-
-    public List<ObjectId> updateMessagesStateToReceived(String username) {
-        UserEntity userEntity = userService.getUser(username);
-        List<ConversationEntity> conversationEntities = conversationService.getAllConversationEntities(userEntity);
-        List<MessageEntity> messageEntities = new ArrayList<>();
-        List<ObjectId> updatedConversationIds = new ArrayList<>();
-        for(ConversationEntity conversationEntity : conversationEntities) {
-            List<ObjectId> messageIds = conversationEntity.getMessageIds();
-            for(int i=messageIds.size()-1; i>=0; i--) {
-                MessageEntity messageEntity = getMessageEntity(messageIds.get(i));
-                if(!messageEntity.getStatus().equals("Sent")) {
-                    // if at-least one message updated then add this conversation id into updatedConversationIds
-                    if (i != messageIds.size()-1) updatedConversationIds.add(conversationEntity.getId());
-                    break;
-                }
-                messageEntity.setStatus("Received");
-                messageEntities.add(messageEntity);
-            }
-        }
-        messageRepository.saveAll(messageEntities);
-        return updatedConversationIds;
-    }
-
-    public boolean updateMessagesStateToViewed (String conversationId) {
-        ConversationEntity conversationEntity = conversationService.getConversationEntity(new ObjectId(conversationId));
-        List<ObjectId> messageIds = conversationEntity.getMessageIds();
-        boolean isUpdated = false;
-        List<MessageEntity> messageEntities = new ArrayList<>();
-        for(int i=messageIds.size()-1; i>=0; i--) {
-            MessageEntity messageEntity = getMessageEntity(messageIds.get(i));
-            if(messageEntity.getStatus().equals("Viewed")) {
-                if (i != messageIds.size()-1) isUpdated = true;
-                break;
-            }
-            messageEntity.setStatus("Viewed");
-            messageEntities.add(messageEntity);
-        }
-        messageRepository.saveAll(messageEntities);
-        return isUpdated;
     }
 
 }

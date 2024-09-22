@@ -25,17 +25,4 @@ public class MessageController {
     @Autowired
     public MessageService messageService;
 
-    @PostMapping("/getLast20MessageBeforeMessageId")
-    public ResponseEntity<?> getLast20MessagesBeforeTimestamp(@RequestBody Map<String, Object> payload) {
-        try {
-            // get conversationId and topMessageId from RequestBody
-            if(!(payload.containsKey("conversationId") && payload.containsKey("topMessageId")))
-                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-            List<MessageDTO> messageDTOs = messageService.getLast20MessageEntitiesBeforeMessageId((String) payload.get("conversationId"), (String) payload.get("topMessageId"));
-            return new ResponseEntity<>(messageDTOs, HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        }
-    }
-
 }

@@ -5,7 +5,10 @@ import com.project.chatApp.dataTransferObject.UserDTO;
 import com.project.chatApp.entity.UserEntity;
 import com.project.chatApp.repository.UserRepository;
 import com.project.chatApp.repository.UserRepositoryImpl;
+import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -27,6 +30,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@Slf4j
 public class UserService {
 
     @Value("${file.upload-dir}")
@@ -45,8 +49,13 @@ public class UserService {
     private static final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public void createUser(UserEntity userEntity) throws Exception {
-        if(userEntity.getUsername().isEmpty() || userEntity.getUsername().isBlank()) throw new Exception("Username can't be empty.");
-        if(userEntity.getPassword().isBlank() || userEntity.getPassword().isEmpty()) throw new Exception("Password can't be empty.");
+        if(userEntity.getUsername().isEmpty() || userEntity.getUsername().isBlank()) {
+            log.error("Username can't be empty.");
+            throw new Exception("Username can't be empty.");
+        }
+        if(userEntity.getPassword().isBlank() || userEntity.getPassword().isEmpty()) {
+            log.error("Password can't be empty.");
+            throw new Exception("Password can't be empty."); }
         try {
             UserEntity newUserEntity = new UserEntity();
             newUserEntity.setUsername(userEntity.getUsername());
@@ -57,7 +66,8 @@ public class UserService {
             newUserEntity.setConversationIds(new ArrayList<>());
             userRepository.insert(newUserEntity);
         } catch (Exception e) {
-            throw new Exception("Username already exist.");
+            log.error("User already exist. {}", String.valueOf(e));
+            throw new Exception("User already exist.");
         }
     }
 
@@ -81,11 +91,8 @@ public class UserService {
         return user.orElse(null);
     }
 
-    public void addConversation(ObjectId userId, ObjectId conversationId) {
-        UserEntity userEntity = getUser(userId);
-        if(userEntity == null) return;
-        userEntity.getConversationIds().add(conversationId);
-        userRepository.save(userEntity);
+    public void addConversationToUsers(List<ObjectId> userIds, ObjectId conversationId) {
+        userRepositoryImpl.addConversationIdToUsers(userIds, conversationId);
     }
 
     public UserDTO getUserDTO() throws Exception {
@@ -93,29 +100,13 @@ public class UserService {
         return getUserDTO(userEntity);
     }
 
-    public UserDTO getUserDTO(UserEntity userEntity) throws Exception {
-        if(userEntity == null) throw new Exception("User not found.");
-        UserDTO userDTO = new UserDTO();
-        userDTO.setId(userEntity.getId().toHexString());
-        userDTO.setUsername(userEntity.getUsername());
-        userDTO.setProfilePicUrl(userEntity.getProfilePicUrl());
-        userDTO.setConversations(conversationService.getAllConversationDTOs(userEntity));
-        return userDTO;
+    public UserDTO getUserDTO(UserEntity user) throws Exception {
+        return userRepositoryImpl.getUserData(user.getUsername());
     }
 
     public PublicUserDTO getPublicUserDTO(ObjectId userId) {
         UserEntity userEntity = getUser(userId);
         if(userEntity == null) return null;
-        PublicUserDTO publicUserDTO = new PublicUserDTO();
-        publicUserDTO.setId(userEntity.getId().toHexString());
-        publicUserDTO.setUsername(userEntity.getUsername());
-        publicUserDTO.setProfilePicUrl(userEntity.getProfilePicUrl());
-        return publicUserDTO;
-    }
-
-    public PublicUserDTO getPublicUserDTO(String username) throws Exception {
-        UserEntity userEntity = getUser(username);
-        if(userEntity == null) throw new Exception("User not found.");
         PublicUserDTO publicUserDTO = new PublicUserDTO();
         publicUserDTO.setId(userEntity.getId().toHexString());
         publicUserDTO.setUsername(userEntity.getUsername());
@@ -159,6 +150,10 @@ public class UserService {
         } else {
             throw new RuntimeException("Could not read the file!");
         }
+    }
+
+    public List<ObjectId> updateMyMessagesOfAllConversationsToReceived(ObjectId userId) {
+        return userRepositoryImpl.updateMyMessagesOfAllConversationsToReceived(userId);
     }
 
     public void encryptUserPassword(UserEntity userEntity) {

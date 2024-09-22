@@ -4,7 +4,9 @@ package com.project.chatApp.entity;
 import lombok.*;
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.ArrayList;
@@ -35,5 +37,9 @@ public class UserEntity {
 
     @NonNull
     private List<ObjectId> conversationIds = new ArrayList<>();
+
+    @Transient
+    @DBRef
+    private List<ConversationEntity> conversations = new ArrayList<>();
 
 }

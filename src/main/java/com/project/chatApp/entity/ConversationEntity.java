@@ -6,6 +6,8 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.ArrayList;
@@ -25,5 +27,13 @@ public class ConversationEntity {
 
     @NonNull
     private List<ObjectId> messageIds = new ArrayList<>();
+
+    @Transient
+    @DBRef
+    private List<UserEntity> members = new ArrayList<>();
+
+    @Transient
+    @DBRef
+    private List<MessageEntity> messages = new ArrayList<>();
 
 }

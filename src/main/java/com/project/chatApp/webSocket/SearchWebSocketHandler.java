@@ -2,10 +2,12 @@ package com.project.chatApp.webSocket;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.chatApp.dataTransferObject.PublicUserDTO;
-import com.project.chatApp.entity.UserEntity;
 import com.project.chatApp.service.ConversationService;
 import com.project.chatApp.service.MessageService;
 import com.project.chatApp.service.UserService;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.socket.CloseStatus;
@@ -17,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 public class SearchWebSocketHandler extends TextWebSocketHandler {
 
     // active connections with key : username
@@ -41,12 +44,12 @@ public class SearchWebSocketHandler extends TextWebSocketHandler {
             if (username != null) {
                 // store active connections in hashMap
                 sessions.put(username, session);
-                System.out.println("Search WebSocket User Connected : " + username);
+                log.info("SearchWebSocket user connected : {} ", username);
             } else {
-                System.out.println("No Authentication Found");
+                log.info("No authentication found");
             }
         } catch (Exception e) {
-            // handle exception
+            log.error("AfterConnectionEstablished : {} ", String.valueOf(e));
         }
     }
 
@@ -57,27 +60,31 @@ public class SearchWebSocketHandler extends TextWebSocketHandler {
             if (username != null) {
                 // remove the disconnected webSocket from hashMap
                 sessions.remove(username);
-                System.out.println("User Disconnected : " + username);
+                log.info("SearchWebSocket user disconnected : {} ", username);
             } else {
-                System.out.println("No Authentication Found");
+                log.info("No authentication found");
             }
         } catch (Exception e) {
-            // handle exception
+            log.error("AfterConnectionClosed : {} ", String.valueOf(e));
         }
     }
 
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage textSerach) throws Exception {
-        String username = getUsername(session);
-        if (username != null) {
-            // get username from textMessage
-            String search = textSerach.getPayload();
-            // check is data present correctly
-            if (search.isEmpty()) return;
-            // send search result to user
-            sendSearchResult(session, search);
-        } else {
-            System.out.println("No Authentication Found");
+        try {
+            String username = getUsername(session);
+            if (username != null) {
+                // get username from textMessage
+                String search = textSerach.getPayload();
+                // check is data present correctly
+                if (search.isEmpty()) return;
+                // send search result to user
+                sendSearchResult(session, search);
+            } else {
+                log.info("No authentication found");
+            }
+        } catch (Exception e) {
+            log.error("HandleTextMessage : {} ", String.valueOf(e));
         }
     }
 
@@ -87,7 +94,7 @@ public class SearchWebSocketHandler extends TextWebSocketHandler {
             String textSearchResult = objectMapper.writeValueAsString(users);
             session.sendMessage(new TextMessage(textSearchResult));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("SendSearchResult : {} ", String.valueOf(e));
         }
     }
 
