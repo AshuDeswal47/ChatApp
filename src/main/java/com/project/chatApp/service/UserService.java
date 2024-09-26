@@ -5,10 +5,9 @@ import com.project.chatApp.dataTransferObject.UserDTO;
 import com.project.chatApp.entity.UserEntity;
 import com.project.chatApp.repository.UserRepository;
 import com.project.chatApp.repository.UserRepositoryImpl;
+import com.project.chatApp.util.ImageCompressor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -18,13 +17,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -32,9 +25,6 @@ import java.util.Optional;
 @Service
 @Slf4j
 public class UserService {
-
-    @Value("${file.upload-dir}")
-    private String PROFILE_PIC_DIRECTORY;
 
     @Autowired
     private UserRepository userRepository;
@@ -45,6 +35,12 @@ public class UserService {
     @Lazy
     @Autowired
     private ConversationService conversationService;
+
+    @Autowired
+    private ImageCompressor imageCompressor;
+
+    @Autowired
+    private CloudinaryService cloudinaryService;
 
     private static final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -91,21 +87,15 @@ public class UserService {
         return user.orElse(null);
     }
 
-    public void addConversationToUsers(List<ObjectId> userIds, ObjectId conversationId) {
+    public void addConversationInUsers(List<ObjectId> userIds, ObjectId conversationId) {
         userRepositoryImpl.addConversationIdToUsers(userIds, conversationId);
     }
 
-    public UserDTO getUserDTO() throws Exception {
-        UserEntity userEntity = getUser();
-        return getUserDTO(userEntity);
+    public UserDTO getUserDataDTO(UserEntity user) {
+        return userRepositoryImpl.getUserDataDTO(user.getUsername());
     }
 
-    public UserDTO getUserDTO(UserEntity user) throws Exception {
-        return userRepositoryImpl.getUserData(user.getUsername());
-    }
-
-    public PublicUserDTO getPublicUserDTO(ObjectId userId) {
-        UserEntity userEntity = getUser(userId);
+    public PublicUserDTO getPublicUserDTO(UserEntity userEntity) {
         if(userEntity == null) return null;
         PublicUserDTO publicUserDTO = new PublicUserDTO();
         publicUserDTO.setId(userEntity.getId().toHexString());
@@ -114,7 +104,7 @@ public class UserService {
         return publicUserDTO;
     }
 
-    public List<PublicUserDTO> getPublicUserDTOs(String search) {
+    public List<PublicUserDTO> getSearchResult(String search) {
         return userRepository.findByUsernameStartingWith(search)
                 .orElse(new ArrayList<>())
                 .stream().map(userEntity -> {
@@ -127,29 +117,12 @@ public class UserService {
     }
 
     public void uploadProfilePic(MultipartFile file) throws Exception {
-        // Create the upload directory if it does not exist
-        File directory = new File(PROFILE_PIC_DIRECTORY);
-        if (!directory.exists()) {
-            directory.mkdirs();
-        }
-        // Get the file
-        String filename = getUsername() +  "-profile-pic" + ".jpeg";
-        Path path = Paths.get(PROFILE_PIC_DIRECTORY + filename);
-        Files.write(path, file.getBytes());
+        String url = cloudinaryService.getFileUrl(cloudinaryService.uploadFile(file));
+        if(url == null || url.isEmpty()) throw new Exception("Unable to upload profilePic");
         // Save file path in database
         UserEntity userEntity = getUser();
-        userEntity.setProfilePicUrl(PROFILE_PIC_DIRECTORY + filename);
+        userEntity.setProfilePicUrl(url);
         userRepository.save(userEntity);
-    }
-
-    public Resource downloadProfilePic(String profilePicUrl) throws Exception {
-        Path filePath = Paths.get(profilePicUrl);
-        Resource resource = new UrlResource(filePath.toUri());
-        if (resource.exists() || resource.isReadable()) {
-            return resource;
-        } else {
-            throw new RuntimeException("Could not read the file!");
-        }
     }
 
     public List<ObjectId> updateMyMessagesOfAllConversationsToReceived(ObjectId userId) {

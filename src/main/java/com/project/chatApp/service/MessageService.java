@@ -37,6 +37,7 @@ public class MessageService {
     }
 
     public List<MessageDTO> getMessageDTOs(List<ObjectId> messageIds) {
+        if(messageIds.isEmpty()) return new ArrayList<>();
         List<MessageEntity> messageEntities = getMessageEntities(messageIds);
         return messageEntities.stream().map(messageEntity -> {
             MessageDTO messageDTO = new MessageDTO();

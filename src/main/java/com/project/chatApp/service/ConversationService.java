@@ -9,8 +9,6 @@ import com.project.chatApp.repository.ConversationRepositoryImpl;
 import com.project.chatApp.webSocket.MessageWebSocketConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -66,9 +64,9 @@ public class ConversationService {
             conversationEntity.setUserIds(userIds);
             conversationEntity = conversationRepository.insert(conversationEntity);
             // and add conversationId in all members conversations list
-            userService.addConversationToUsers(userIds, conversationEntity.getId());
+            userService.addConversationInUsers(userIds, conversationEntity.getId());
             // send new conversation to clients
-            ConversationDTO conversationDTO = getConversationDTO(conversationEntity);
+            ConversationDTO conversationDTO = getConversationDTO(conversationEntity, userEntity2);
             messageWebSocketConfig.getWebSocketHandler().sendConversation(conversationDTO, userEntity2.getId());
             return conversationDTO;
         } catch (Exception e) {
@@ -101,13 +99,11 @@ public class ConversationService {
         return conversationRepository.findAllById(conversationIds);
     }
 
-    public ConversationDTO getConversationDTO(ConversationEntity conversationEntity) {
-        String myUsername = userService.getUsername();
+    public ConversationDTO getConversationDTO(ConversationEntity conversationEntity, UserEntity member) {
         ConversationDTO conversationDTO = new ConversationDTO();
         conversationDTO.setId(conversationEntity.getId().toHexString());
         // get members of conversation excluding me
-        conversationDTO.setMembers(conversationEntity.getUserIds().stream().map(userId -> userService.getPublicUserDTO(userId))
-                .filter(publicUserDTO -> !(publicUserDTO == null || publicUserDTO.getUsername().equals(myUsername))).toList());
+        conversationDTO.setMembers(List.of(userService.getPublicUserDTO(member)));
         List<ObjectId> messageIds = conversationEntity.getMessageIds();
         // get last 20 messages
         if (messageIds.size() > 20) {

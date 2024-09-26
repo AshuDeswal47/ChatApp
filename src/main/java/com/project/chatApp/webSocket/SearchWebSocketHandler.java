@@ -6,8 +6,6 @@ import com.project.chatApp.service.ConversationService;
 import com.project.chatApp.service.MessageService;
 import com.project.chatApp.service.UserService;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.socket.CloseStatus;
@@ -90,7 +88,7 @@ public class SearchWebSocketHandler extends TextWebSocketHandler {
 
     public void sendSearchResult(WebSocketSession session, String search) {
         try {
-            List<PublicUserDTO> users = userService.getPublicUserDTOs(search);
+            List<PublicUserDTO> users = userService.getSearchResult(search);
             String textSearchResult = objectMapper.writeValueAsString(users);
             session.sendMessage(new TextMessage(textSearchResult));
         } catch (Exception e) {

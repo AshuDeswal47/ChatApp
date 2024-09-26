@@ -13,11 +13,8 @@ import com.project.chatApp.service.MessageService;
 import com.project.chatApp.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
-import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -234,7 +231,7 @@ public class MessageWebSocketHandler extends TextWebSocketHandler {
             // build json object
             JsonObject response = new JsonObject();
             response.addProperty("type", "user-data");
-            response.addProperty("userData", objectMapper.writeValueAsString(userService.getUserDTO(userEntity)));
+            response.addProperty("userData", objectMapper.writeValueAsString(userService.getUserDataDTO(userEntity)));
             // send message
             sessions.get(userEntity.getId()).sendMessage(new TextMessage(response.toString()));
         } catch (Exception e) {

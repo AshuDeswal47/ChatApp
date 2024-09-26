@@ -5,9 +5,6 @@ import com.project.chatApp.dataTransferObject.ConversationDTO;
 import com.project.chatApp.dataTransferObject.MessageDTO;
 import com.project.chatApp.dataTransferObject.PublicUserDTO;
 import com.project.chatApp.dataTransferObject.UserDTO;
-import com.project.chatApp.entity.ConversationEntity;
-import com.project.chatApp.entity.MessageEntity;
-import com.project.chatApp.entity.UserEntity;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +25,7 @@ public class UserRepositoryImpl {
     @Autowired
     private MongoTemplate mongoTemplate;
 
-    public UserDTO getUserData(String username) {
+    public UserDTO getUserDataDTO(String username) {
         // Define the aggregation pipeline
         Aggregation aggregation = Aggregation.newAggregation(
                 Aggregation.match(Criteria.where("username").is(username)),
