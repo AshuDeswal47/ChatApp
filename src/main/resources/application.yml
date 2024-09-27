@@ -8,10 +8,6 @@ spring:
       uri: ${MONGODB_HOST}
       database: chatAppDB
 
-  #TomcatServer
-  server:
-    port: 8080
-
   #FileTransfer
   servlet:
     multipart:
