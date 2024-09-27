@@ -1,4 +1,4 @@
-package com.project.chatApp.util;
+package com.project.chatApp.utils;
 
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;

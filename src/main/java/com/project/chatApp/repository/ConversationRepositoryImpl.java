@@ -1,7 +1,6 @@
 package com.project.chatApp.repository;
 
 import com.mongodb.client.result.UpdateResult;
-import com.mongodb.internal.bulk.UpdateRequest;
 import com.project.chatApp.dataTransferObject.MessageDTO;
 import org.bson.Document;
 import org.bson.types.ObjectId;
