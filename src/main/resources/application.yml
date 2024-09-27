@@ -7,7 +7,6 @@ spring:
     mongodb:
       uri: ${MONGODB_HOST}
       database: chatAppDB
-      auto-index-creation: true
 
   #TomcatServer
   server:
