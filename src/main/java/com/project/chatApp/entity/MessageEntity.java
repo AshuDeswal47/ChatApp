@@ -27,9 +27,6 @@ public class MessageEntity implements Comparable {
     @NonNull
     private String message;
 
-    @DBRef
-    private AttachmentEntity attachment;
-
     @NonNull
     private String status;
 
