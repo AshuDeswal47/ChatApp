@@ -1,10 +1,8 @@
 package com.project.chatApp.repository;
 
 import com.mongodb.BasicDBObject;
-import com.project.chatApp.dataTransferObject.ConversationDTO;
-import com.project.chatApp.dataTransferObject.MessageDTO;
-import com.project.chatApp.dataTransferObject.PublicUserDTO;
-import com.project.chatApp.dataTransferObject.UserDTO;
+import com.project.chatApp.dataTransferObject.*;
+import com.project.chatApp.entity.AttachmentEntity;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -87,6 +85,17 @@ public class UserRepositoryImpl {
                         message.setTimestamp(messageDoc.getLong("timestamp"));
                         message.setConversationId(messageDoc.getObjectId("conversationId").toHexString());
                         message.setSenderId(messageDoc.getObjectId("senderId").toHexString());
+                        if(messageDoc.containsKey("attachment")) {
+                            AttachmentEntity attachmentEntity =(AttachmentEntity) messageDoc.get("attachment");
+                            AttachmentDTO attachment = new AttachmentDTO();
+                            attachment.setId(attachmentEntity.getId().toHexString());
+                            attachment.setUrl(attachmentEntity.getUrl());
+                            attachment.setContentType(attachmentEntity.getContentType());
+                            attachment.setSize(attachmentEntity.getSize());
+                            message.setAttachment(attachment);
+                        } else {
+                            message.setAttachment(null);
+                        }
                         messages.add(message);
                     }
                 }

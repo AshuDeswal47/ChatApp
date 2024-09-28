@@ -1,4 +1,4 @@
-package com.project.chatApp.dataTransferObject;
+package com.project.chatApp.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -11,20 +11,20 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class MessageDTO {
+@Document("attachment")
+public class AttachmentEntity {
 
-    private String id;
+    @Id
+    private ObjectId id;
 
-    private String conversationId;
+    @NonNull
+    private String url;
 
-    private String senderId;
+    @NonNull
+    private String contentType;
 
-    private String message;
-
-    private AttachmentDTO attachment;
-
-    private String status;
-
-    private Long timestamp;
+    @NonNull
+    private Long size;
 
 }
+

@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Data
@@ -25,6 +26,9 @@ public class MessageEntity implements Comparable {
 
     @NonNull
     private String message;
+
+    @DBRef
+    private AttachmentEntity attachment;
 
     @NonNull
     private String status;
