@@ -22,8 +22,7 @@ public class UserController {
     public ResponseEntity<?> uploadProfilePic(@RequestParam("profilePic") MultipartFile file) {
         if (file.isEmpty()) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Please select a file to upload");
         try {
-            userService.uploadProfilePic(file);
-            return ResponseEntity.status(HttpStatus.OK).body("File uploaded successfully: " + file.getOriginalFilename());
+            return ResponseEntity.status(HttpStatus.OK).body(userService.uploadProfilePic(file));
         } catch (Exception e) {
             log.error("Failed to upload profilePic {}", String.valueOf(e));
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to upload the file: " + e.getMessage());

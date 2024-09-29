@@ -115,13 +115,16 @@ public class UserService {
                 }).toList();
     }
 
-    public void uploadProfilePic(MultipartFile file) throws Exception {
+    public String uploadProfilePic(MultipartFile file) throws Exception {
         String url = cloudinaryService.getFileUrl(cloudinaryService.uploadFile(file));
         if(url == null || url.isEmpty()) throw new Exception("Unable to upload profilePic");
         // Save file path in database
         UserEntity userEntity = getUser();
+        if(!userEntity.getProfilePicUrl().equals("Default"))
+            cloudinaryService.deleteFile(userEntity.getProfilePicUrl());
         userEntity.setProfilePicUrl(url);
         userRepository.save(userEntity);
+        return url;
     }
 
     public List<ObjectId> updateMyMessagesOfAllConversationsToReceived(ObjectId userId) {
