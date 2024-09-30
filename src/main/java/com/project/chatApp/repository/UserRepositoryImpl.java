@@ -169,4 +169,17 @@ public class UserRepositoryImpl {
         mongoTemplate.updateMulti(query, update, COLLECTION);
     }
 
+    public void updateProfilePicUrl(ObjectId userId, String profilePicUrl) {
+
+        // Create a query to find the conversation by id
+        Query query = new Query(Criteria.where("_id").in(userId));
+
+        // Create an update operation to add the new message to the messageIds array
+        Update update = new Update().set("profilePicUrl", profilePicUrl);
+
+        // Perform the update
+        mongoTemplate.updateMulti(query, update, COLLECTION);
+
+    }
+
 }

@@ -23,7 +23,7 @@ public class CloudinaryService {
     // Upload File to Cloudinary
     public Map uploadFile(MultipartFile file) throws IOException {
         Map uploadParams = ObjectUtils.asMap(
-                "transformation", new Transformation().width(500).height(500).crop("limit")
+                "transformation", new Transformation().width(500).height(500).crop("thumb")
         );
         return cloudinary.uploader().upload(file.getBytes(), uploadParams);
     }
@@ -37,4 +37,12 @@ public class CloudinaryService {
     public String getFileUrl(Map uploadResult) {
         return uploadResult.get("url").toString();
     }
+
+    public String getPublicId(String url) {
+        // Find the last occurrence of the delimiter
+        int firstIndex = url.lastIndexOf("/") + 1;
+        int lastIndex = url.lastIndexOf(".");
+        return url.substring(firstIndex, lastIndex);
+    }
+
 }

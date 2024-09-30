@@ -62,9 +62,13 @@ public class UserServiceTests {
     }
 
     @ParameterizedTest
-    @ValueSource(strings={"as", "vij", "mo"})
-    public void testGetSearchResult(String search) {
-        List<PublicUserDTO> publicUserDTOs = userService.getSearchResult(search);
+    @CsvSource({
+            "'aj', 'ashu'",
+            "'v', 'vijay'",
+            "'m', 'ajay'"
+    })
+    public void testGetSearchResult(String search, String username) {
+        List<PublicUserDTO> publicUserDTOs = userService.getSearchResult(search, username);
         assertNotNull(publicUserDTOs);
         for(PublicUserDTO publicUserDTO : publicUserDTOs) {
             assertNotNull(publicUserDTO.getId());

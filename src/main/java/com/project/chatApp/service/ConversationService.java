@@ -7,6 +7,7 @@ import com.project.chatApp.entity.UserEntity;
 import com.project.chatApp.repository.ConversationRepository;
 import com.project.chatApp.repository.ConversationRepositoryImpl;
 import com.project.chatApp.webSocket.MessageWebSocketConfig;
+import com.project.chatApp.webSocket.MessageWebSocketHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,8 +37,12 @@ public class ConversationService {
     @Autowired
     UserService userService;
 
+    MessageWebSocketHandler messageWebSocketHandler;
+
     @Autowired
-    MessageWebSocketConfig messageWebSocketConfig;
+    public ConversationService(MessageWebSocketHandler messageWebSocketHandler) {
+        this.messageWebSocketHandler = messageWebSocketHandler;
+    }
 
     @Transactional
     public ConversationDTO createConversation(String username) throws Exception {
@@ -67,7 +72,7 @@ public class ConversationService {
             userService.addConversationInUsers(userIds, conversationEntity.getId());
             // send new conversation to clients
             ConversationDTO conversationDTO = getConversationDTO(conversationEntity, userEntity2);
-            messageWebSocketConfig.getWebSocketHandler().sendConversation(conversationDTO, userEntity2.getId());
+            messageWebSocketHandler.sendConversation(conversationDTO, userEntity2.getId());
             return conversationDTO;
         } catch (Exception e) {
             log.error("Unable to create conversation.");

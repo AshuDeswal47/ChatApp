@@ -88,7 +88,7 @@ public class SearchWebSocketHandler extends TextWebSocketHandler {
 
     public void sendSearchResult(WebSocketSession session, String search) {
         try {
-            List<PublicUserDTO> users = userService.getSearchResult(search);
+            List<PublicUserDTO> users = userService.getSearchResult(search, getUsername(session));
             String textSearchResult = objectMapper.writeValueAsString(users);
             session.sendMessage(new TextMessage(textSearchResult));
         } catch (Exception e) {

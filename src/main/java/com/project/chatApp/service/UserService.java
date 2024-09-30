@@ -103,7 +103,7 @@ public class UserService {
         return publicUserDTO;
     }
 
-    public List<PublicUserDTO> getSearchResult(String search) {
+    public List<PublicUserDTO> getSearchResult(String search, String username) {
         return userRepository.findByUsernameStartingWith(search)
                 .orElse(new ArrayList<>())
                 .stream().map(userEntity -> {
@@ -112,19 +112,20 @@ public class UserService {
                     publicUserDTO.setUsername(userEntity.getUsername());
                     publicUserDTO.setProfilePicUrl(userEntity.getProfilePicUrl());
                     return publicUserDTO;
-                }).toList();
+                }).filter(userEntity -> !userEntity.getUsername().equals(username)).toList();
     }
 
     public String uploadProfilePic(MultipartFile file) throws Exception {
-        String url = cloudinaryService.getFileUrl(cloudinaryService.uploadFile(file));
-        if(url == null || url.isEmpty()) throw new Exception("Unable to upload profilePic");
+        String profilePicUrl = cloudinaryService.getFileUrl(cloudinaryService.uploadFile(file));
+        if(profilePicUrl == null || profilePicUrl.isEmpty()) throw new Exception("Unable to upload profilePic");
         // Save file path in database
         UserEntity userEntity = getUser();
+        // delete old profilePic from database
         if(!userEntity.getProfilePicUrl().equals("Default"))
-            cloudinaryService.deleteFile(userEntity.getProfilePicUrl());
-        userEntity.setProfilePicUrl(url);
-        userRepository.save(userEntity);
-        return url;
+            cloudinaryService.deleteFile(cloudinaryService.getPublicId(userEntity.getProfilePicUrl()));
+        // update profilePicUrl
+        userRepositoryImpl.updateProfilePicUrl(userEntity.getId(), profilePicUrl);
+        return profilePicUrl;
     }
 
     public List<ObjectId> updateMyMessagesOfAllConversationsToReceived(ObjectId userId) {

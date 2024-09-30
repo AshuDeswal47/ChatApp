@@ -11,22 +11,24 @@ import org.springframework.web.socket.config.annotation.*;
 @EnableWebSocket
 public class MessageWebSocketConfig implements WebSocketConfigurer {
 
-    MessageWebSocketHandler messageWebSocketHandler;
+    private final MessageWebSocketHandler messageWebSocketHandler;
+
+    // Constructor injection to automatically inject the WebSocket handler bean
+    public MessageWebSocketConfig(MessageWebSocketHandler messageWebSocketHandler) {
+        this.messageWebSocketHandler = messageWebSocketHandler;
+    }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(createNewMessageWebSocketHandler(), "/ws/message").addInterceptors(new CustomHandshakeInterceptor()).setAllowedOrigins("*");
+        registry.addHandler(messageWebSocketHandler, "/ws/message")
+                .addInterceptors(new CustomHandshakeInterceptor())
+                .setAllowedOrigins("*");
     }
 
+    // WebSocket handler bean definition
     @Bean
-    public WebSocketHandler createNewMessageWebSocketHandler() {
-        messageWebSocketHandler = new MessageWebSocketHandler();
-        return messageWebSocketHandler;
-    }
-
-    @Bean
-    public MessageWebSocketHandler getWebSocketHandler() {
-        return messageWebSocketHandler;
+    public MessageWebSocketHandler messageWebSocketHandler() {
+        return new MessageWebSocketHandler();
     }
 
 }
