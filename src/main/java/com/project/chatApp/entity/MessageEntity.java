@@ -30,6 +30,8 @@ public class MessageEntity implements Comparable {
     @NonNull
     private String status;
 
+    private ObjectId attachmentId;
+
     @NonNull
     private Long timestamp;
 

@@ -33,14 +33,22 @@ public class UserRepositoryImpl {
                         .and("conversations.messageIds").slice(-20).as("lastMessages"),
                 Aggregation.lookup("user", "conversations.userIds", "_id", "conversations.members"),
                 Aggregation.lookup("message", "lastMessages", "_id", "conversations.messages"),
-                Aggregation.group("_id") // Group back to the original user document
+                Aggregation.unwind("conversations.messages", true),
+                Aggregation.lookup("attachment", "conversations.messages.attachmentId", "_id", "conversations.messages.attachment"),
+                Aggregation.group("conversations._id") // Group back to the original user document
+                        .first("_id").as("user_id")
+                        .first("username").as("username")
+                        .first("profilePicUrl").as("profilePicUrl")
+                        .first("members").as("members")
+                        .push( "messages").as("messages"),
+                Aggregation.group("user_id") // Group back to the original user document
                         .first("username").as("username")
                         .first("profilePicUrl").as("profilePicUrl")
                         .push(new BasicDBObject()
-                                .append("_id", "$conversations._id")
-                                .append("messages", "$conversations.messages")
+                                .append("_id", "$_id")
+                                .append("messages", "$messages")
                                 .append("members", new BasicDBObject("$map", new BasicDBObject()
-                                        .append("input", "$conversations.members")
+                                        .append("input", "$members")
                                         .append("as", "members")
                                         .append("in", new BasicDBObject()
                                                 .append("_id", "$$members._id")
@@ -77,6 +85,8 @@ public class UserRepositoryImpl {
                 List<MessageDTO> messages = new ArrayList<>();
                 if (messageDocs != null && !messageDocs.isEmpty()) {
                     for (Document messageDoc : messageDocs) {
+                        // if message is empty then break the loop
+                        if(messageDoc.get("_id") == null) break;
                         MessageDTO message = new MessageDTO();
                         message.setId(messageDoc.getObjectId("_id").toHexString());
                         message.setMessage(messageDoc.getString("message"));
@@ -84,6 +94,16 @@ public class UserRepositoryImpl {
                         message.setTimestamp(messageDoc.getLong("timestamp"));
                         message.setConversationId(messageDoc.getObjectId("conversationId").toHexString());
                         message.setSenderId(messageDoc.getObjectId("senderId").toHexString());
+                        List<Document> attachmentDocs = (List<Document>) messageDoc.get("attachment");
+                        if(attachmentDocs != null && !attachmentDocs.isEmpty()) {
+                            Document attachmentDoc =  attachmentDocs.get(0);
+                            AttachmentDTO attachment = new AttachmentDTO();
+                            attachment.setId(attachmentDoc.getObjectId("_id").toHexString());
+                            attachment.setUrl(attachmentDoc.getString("url"));
+                            attachment.setContentType(attachmentDoc.getString("contentType"));
+                            attachment.setSize(attachmentDoc.getLong("size"));
+                            message.setAttachment(attachment);
+                        }
                         messages.add(message);
                     }
                 }

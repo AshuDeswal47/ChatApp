@@ -1,6 +1,7 @@
 package com.project.chatApp.repository;
 
 import com.mongodb.client.result.UpdateResult;
+import com.project.chatApp.dataTransferObject.AttachmentDTO;
 import com.project.chatApp.dataTransferObject.MessageDTO;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -42,7 +43,11 @@ public class ConversationRepositoryImpl {
                 Aggregation.group().push("messageIds").as("messageIds"),
                 Aggregation.project().and("messageIds").slice(-20).as("messageIds"),
                 Aggregation.lookup("message", "messageIds", "_id", "messages"),
-                Aggregation.project().andInclude("messages")
+                Aggregation.project().andInclude("messages"),
+                Aggregation.unwind("messages", true),
+                Aggregation.lookup("attachment", "messages.attachmentId", "_id", "messages.attachment"),
+                Aggregation.group("_id")
+                        .push("messages").as("messages")
         );
 
         // Execute the aggregation to get messageIds
@@ -50,15 +55,25 @@ public class ConversationRepositoryImpl {
 
         return results.stream()
                 .flatMap(doc -> ((List<Document>) doc.get("messages")).stream())
-                .map(message -> {
-                    MessageDTO messageDTO = new MessageDTO();
-                    messageDTO.setId(message.getObjectId("_id").toHexString());
-                    messageDTO.setConversationId(message.getObjectId("conversationId").toHexString());
-                    messageDTO.setSenderId(message.getObjectId("senderId").toHexString());
-                    messageDTO.setMessage(message.getString("message"));
-                    messageDTO.setStatus(message.getString("status"));
-                    messageDTO.setTimestamp(message.getLong("timestamp"));
-                    return messageDTO;
+                .map(messageDoc -> {
+                    MessageDTO message = new MessageDTO();
+                    message.setId(messageDoc.getObjectId("_id").toHexString());
+                    message.setConversationId(messageDoc.getObjectId("conversationId").toHexString());
+                    message.setSenderId(messageDoc.getObjectId("senderId").toHexString());
+                    message.setMessage(messageDoc.getString("message"));
+                    message.setStatus(messageDoc.getString("status"));
+                    message.setTimestamp(messageDoc.getLong("timestamp"));
+                    List<Document> attachmentDocs = (List<Document>) messageDoc.get("attachment");
+                    if(attachmentDocs != null && !attachmentDocs.isEmpty()) {
+                        Document attachmentDoc =  attachmentDocs.get(0);
+                        AttachmentDTO attachment = new AttachmentDTO();
+                        attachment.setId(attachmentDoc.getObjectId("_id").toHexString());
+                        attachment.setUrl(attachmentDoc.getString("url"));
+                        attachment.setContentType(attachmentDoc.getString("contentType"));
+                        attachment.setSize(attachmentDoc.getLong("size"));
+                        message.setAttachment(attachment);
+                    }
+                    return message;
                 }).toList();
     }
 

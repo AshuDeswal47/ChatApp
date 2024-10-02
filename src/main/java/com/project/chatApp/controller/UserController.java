@@ -21,6 +21,8 @@ public class UserController {
     @PostMapping("/uploadProfilePic")
     public ResponseEntity<?> uploadProfilePic(@RequestParam("profilePic") MultipartFile file) {
         if (file.isEmpty()) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Please select a file to upload");
+        if (file.getContentType() != null && !file.getContentType().startsWith("image"))
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Please select an image file to upload");
         try {
             return ResponseEntity.status(HttpStatus.OK).body(userService.uploadProfilePic(file));
         } catch (Exception e) {

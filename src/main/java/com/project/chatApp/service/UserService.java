@@ -116,7 +116,7 @@ public class UserService {
     }
 
     public String uploadProfilePic(MultipartFile file) throws Exception {
-        String profilePicUrl = cloudinaryService.getFileUrl(cloudinaryService.uploadFile(file));
+        String profilePicUrl = cloudinaryService.getFileUrl(cloudinaryService.uploadProfilePic(file));
         if(profilePicUrl == null || profilePicUrl.isEmpty()) throw new Exception("Unable to upload profilePic");
         // Save file path in database
         UserEntity userEntity = getUser();

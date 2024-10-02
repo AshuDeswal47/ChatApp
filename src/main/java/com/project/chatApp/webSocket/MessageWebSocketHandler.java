@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.project.chatApp.dataTransferObject.ConversationDTO;
 import com.project.chatApp.dataTransferObject.MessageDTO;
+import com.project.chatApp.entity.AttachmentEntity;
 import com.project.chatApp.entity.ConversationEntity;
 import com.project.chatApp.entity.MessageEntity;
 import com.project.chatApp.entity.UserEntity;
@@ -126,7 +127,7 @@ public class MessageWebSocketHandler extends TextWebSocketHandler {
         // add message in mongodb-database
         MessageEntity messageEntity = messageService.addMessage(messageService.getMessageEntryFromMessageDTO(messageDTO), username);
         // send message to receiver if messageEntity not equals to null and webSocket is connected
-        if (messageEntity != null) sendMessage(messageEntity);
+        if (messageEntity != null) sendMessage(messageEntity, null);
     }
 
     private void handleStatusUpdate(String username, JsonObject json) {
@@ -150,7 +151,7 @@ public class MessageWebSocketHandler extends TextWebSocketHandler {
         sendMessages(conversationId, username, conversationService.getLast20MessageEntitiesBeforeMessageId(conversationId, topMessageId));
     }
 
-    private void sendMessage (MessageEntity messageEntity) {
+    private void sendMessage(MessageEntity messageEntity, AttachmentEntity attachmentEntity) {
         try {
             // sender user id
             ObjectId senderId = messageEntity.getSenderId();
@@ -165,7 +166,7 @@ public class MessageWebSocketHandler extends TextWebSocketHandler {
             }
             if(receiverId != null) messageEntity.setStatus("Received");
             // convert pojo to jason string
-            String message = objectMapper.writeValueAsString(messageService.getMessageDTOFromMessageEntry(messageEntity));
+            String message = objectMapper.writeValueAsString(messageService.getMessageDTOFromMessageEntry(messageEntity, attachmentEntity));
             // build json object
             JsonObject response = new JsonObject();
             response.addProperty("type", "message");

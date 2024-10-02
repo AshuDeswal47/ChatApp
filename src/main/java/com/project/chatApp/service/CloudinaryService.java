@@ -21,11 +21,18 @@ public class CloudinaryService {
     }
 
     // Upload File to Cloudinary
-    public Map uploadFile(MultipartFile file) throws IOException {
+    public Map uploadProfilePic(MultipartFile file) throws IOException {
         Map uploadParams = ObjectUtils.asMap(
                 "transformation", new Transformation().width(500).height(500).crop("thumb")
         );
         return cloudinary.uploader().upload(file.getBytes(), uploadParams);
+    }
+
+    // Upload File to Cloudinary
+    public Map uploadFile(MultipartFile file, String resourceType) throws IOException {
+        return cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
+                "resource_type", resourceType
+        ));
     }
 
     // Delete a File from Cloudinary by Public ID
